@@ -63,12 +63,15 @@ function _calcRouteMetaData(metaData: MetaData): MetaData {
   });
 }
 
-function route2RouteComponent(route: MetaData, wrap: string) {
+function route2RouteConfig(route: MetaData, wrap: string) {
   return `
-<Route path={${`\`${route.path}\``}} component={${wrap.replace(
-    '$1',
-    route.component,
-  )}} exact />
+  ["${route.path}"]: ${wrap.replace('$1', route.component)}
+`;
+}
+
+function route2RouteComponent(route: MetaData) {
+  return `
+<Route path="${route.path}" component={RouteConfig["${route.path}"]} exact />
 `;
 }
 
@@ -96,17 +99,7 @@ export function generate(params: GenCodeInput) {
     .sort(compareFunc('path'))
     .reverse();
 
-  const routesCode = `
-  ${sourceHead}
-
-  export default () => (
-    <>
-      ${routes.map((route) => route2RouteComponent(route, wrap)).join('')}
-    </>
-  )
-  `;
-
-  const typeCode = `export type RoutSlugMap = {
+  const typeCode = `export type RouteSlugMap = {
     ${routes
       .filter((route) => route.slugs)
       .map(
@@ -118,8 +111,23 @@ export function generate(params: GenCodeInput) {
       .join(';')}
   }`;
 
+  const routesCode = `
+  ${sourceHead}
+
+  ${typeCode}
+
+  export const RouteConfig = {
+    ${routes.map((route) => route2RouteConfig(route, wrap))}
+  }
+
+  export default () => (
+    <>
+      ${routes.map((route) => route2RouteComponent(route)).join('')}
+    </>
+  )
+  `;
+
   return {
     routesCode,
-    typeCode,
   };
 }

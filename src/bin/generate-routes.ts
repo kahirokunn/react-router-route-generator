@@ -13,7 +13,6 @@ program
   .option('--wrap <string>', 'default: loadable($1)')
   .option('--targetDir <dir>', 'target page dir. default: src/pages')
   .option('-i, --ignore <globs...>', 'ex. **/*.stories.*')
-  .option('--typescript', 'generate typescript type file')
   .parse(process.argv);
 
 if (!program.output) {
@@ -31,7 +30,4 @@ if (!program.output) {
     ignorePatterns: program.ignore,
   });
   fs.writeFileSync(path.resolve(outputDir, 'routes.tsx'), code.routesCode);
-  if (program.typescript) {
-    fs.writeFileSync(path.resolve(outputDir, 'type.ts'), code.typeCode);
-  }
 }
