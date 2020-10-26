@@ -13,6 +13,7 @@ program
   .option('--wrap <string>', 'default: loadable($1)')
   .option('--targetDir <dir>', 'target page dir. default: src/pages')
   .option('-i, --ignore <globs...>', 'ex. **/*.stories.*')
+  .option('--prefetch', 'set webpackPrefetch')
   .parse(process.argv);
 
 if (!program.output) {
@@ -28,6 +29,7 @@ if (!program.output) {
     wrap: program.wrap,
     targetDir: program.targetDir,
     ignorePatterns: program.ignore,
+    prefetch: program.prefetch,
   });
   fs.writeFileSync(path.resolve(outputDir, 'routes.tsx'), code.routesCode);
 }

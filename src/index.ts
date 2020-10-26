@@ -33,7 +33,7 @@ type MetaData = {
   slugs?: Slugs;
 };
 
-function genRouteMetaData(componentPath: string): MetaData {
+function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
   const path = componentPath
     // 拡張子を取り除く
     .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1')
@@ -42,7 +42,9 @@ function genRouteMetaData(componentPath: string): MetaData {
     // 先頭の@/pagesを取り除く
     .replace(/^@\/pages(.*)$/, '$1');
   return _calcRouteMetaData({
-    component: `() => import(\`${componentPath}\`)`
+    component: `() => import(${
+      prefetch ? '/* webpackPrefetch: true */' : ''
+    } \`${componentPath}\`)`
       // 拡張子を取り除く
       .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1'),
     path: path === '' ? '/' : path,
@@ -80,6 +82,7 @@ type GenCodeInput = Partial<{
   wrap: string;
   targetDir: string;
   ignorePatterns: string[];
+  prefetch: boolean;
 }>;
 export function generate(params: GenCodeInput) {
   const {
@@ -87,6 +90,7 @@ export function generate(params: GenCodeInput) {
     wrap = 'loadable($1)',
     targetDir = 'src/pages',
     ignorePatterns = [],
+    prefetch = false,
   } = params;
 
   const routes = globSync(`${targetDir}/**/*`, ignorePatterns)
@@ -95,7 +99,7 @@ export function generate(params: GenCodeInput) {
       assertsHasValue(result, "There can't be an error here.");
       return `@/${result[1]}`;
     })
-    .map((componentPath) => genRouteMetaData(componentPath))
+    .map((componentPath) => genRouteMetaData(componentPath, prefetch))
     .sort(compareFunc('path'))
     .reverse();
 
