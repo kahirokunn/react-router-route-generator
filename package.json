@@ -1,6 +1,6 @@
 {
   "name": "react-router-route-generator",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "React Router route generator",
   "homepage": "https://github.com/kahirokunn/react-router-route-generator",
   "bugs": "https://github.com/kahirokunn/react-router-route-generator/issues",
@@ -44,6 +44,7 @@
     ]
   },
   "dependencies": {
+    "commander": "^6.2.0",
     "compare-func": "^2.0.0",
     "glob": "^7.1.6"
   },
