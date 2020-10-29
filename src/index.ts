@@ -25,16 +25,25 @@ function globSync(
   );
 }
 
-type Slugs = string[];
+type Slug = {
+  name: string;
+  isRest: boolean;
+};
+type Slugs = Slug[];
 
 type MetaData = {
   component: string;
+  urlPath: string;
   path: string;
   slugs?: Slugs;
 };
 
+function getRestSlug(metaData: MetaData) {
+  return metaData.slugs && metaData.slugs.find((slug) => slug.isRest === true);
+}
+
 function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
-  const path = componentPath
+  const urlPath = componentPath
     // 拡張子を取り除く
     .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1')
     // /index を消す
@@ -42,38 +51,56 @@ function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
     // 先頭の@/pagesを取り除く
     .replace(/^@\/pages(.*)$/, '$1');
   return _calcRouteMetaData({
+    path: urlPath,
     component: `() => import(${
       prefetch ? '/* webpackPrefetch: true */' : ''
-    } \`${componentPath}\`)`
+    } '${componentPath}')`
       // 拡張子を取り除く
       .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1'),
-    path: path === '' ? '/' : path,
+    urlPath: urlPath === '' ? '/' : urlPath,
   });
 }
 
 // hoge/fuga/[piyo]/[piyopiyo] => hoge/fuga/:piyo/:piyopiyo
 function _calcRouteMetaData(metaData: MetaData): MetaData {
-  const result = /^(.*)\[(.*?)\](.*)$/.exec(metaData.path);
+  const result = /^(.*)\[(.*?)\](.*)$/.exec(metaData.urlPath);
   if (!result) {
     return metaData;
   }
   result.reverse();
+  let isRest = false;
+
+  const slug = /^\.\.\.(.*)$/.exec(result[1]);
+  if (slug) {
+    isRest = true;
+    result[1] = slug[1];
+  }
+
   return _calcRouteMetaData({
     component: metaData.component,
-    path: `${result[2]}:${result[1]}${result[0]}`,
-    slugs: [...(metaData.slugs ?? []), result[1]],
+    path: metaData.path,
+    urlPath: isRest ? result[2] : `${result[2]}:${result[1]}${result[0]}`,
+    slugs: [
+      ...(metaData.slugs ?? []),
+      {
+        name: result[1],
+        isRest,
+      },
+    ],
   });
 }
 
 function route2RouteConfig(route: MetaData, wrap: string) {
   return `
-  ["${route.path}"]: ${wrap.replace('$1', route.component)}
+  ['${route.urlPath}']: ${wrap.replace('$1', route.component)}
 `;
 }
 
 function route2RouteComponent(route: MetaData) {
   return `
-<Route path="${route.path}" component={RouteConfig["${route.path}"]} exact />
+<Route path='${route.urlPath}' component={RouteConfig["${route.urlPath}"]} ${
+    getRestSlug(route) ? 'strict' : 'exact'
+  } />
 `;
 }
 
@@ -100,17 +127,35 @@ export function generate(params: GenCodeInput) {
       return `@/${result[1]}`;
     })
     .map((componentPath) => genRouteMetaData(componentPath, prefetch))
-    .sort(compareFunc('path'))
+    .sort(compareFunc('urlPath'))
     .reverse();
 
-  const typeCode = `export type RouteSlugMap = {
+  const typeCode = `export type UseParamsType = {
     ${routes
       .filter((route) => route.slugs)
       .map(
         (route) =>
-          `[\`${route.path}\`]: { ${(route.slugs as Slugs)
-            .map((slugName) => `[\`${slugName}\`]: string`)
+          `['${route.path}']: { ${(route.slugs as Slugs)
+            .filter((route) => !route.isRest)
+            .map((slug) => `['${slug.name}']: string`)
             .join(';')} }`,
+      )
+      .join(';')}
+  }`;
+
+  const regExpCode = `export const extractRestParamsFromPathname = {
+    ${routes
+      .filter((route) => getRestSlug(route))
+      .map(
+        (route) =>
+          `['${
+            route.path
+          }']: (pathname: string) => new RegExp('^${route.path
+            .replace(/\[\.\.\..*?\]/, '(.*)')
+            .replace(
+              /\[.*?\]/g,
+              '(?:.*?)',
+            )}$').exec(pathname)?.[1].split('/') || []`,
       )
       .join(';')}
   }`;
@@ -119,6 +164,8 @@ export function generate(params: GenCodeInput) {
   ${sourceHead}
 
   ${typeCode}
+
+  ${regExpCode}
 
   export const RouteConfig = {
     ${routes.map((route) => route2RouteConfig(route, wrap))}
