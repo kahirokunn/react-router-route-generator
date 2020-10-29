@@ -36,22 +36,25 @@ type MetaData = {
   urlPath: string;
   path: string;
   slugs?: Slugs;
+  isLastOptional: boolean;
 };
 
-function getRestSlug(metaData: MetaData) {
-  return metaData.slugs && metaData.slugs.find((slug) => slug.isRest === true);
-}
-
+// 拡張子を取り除く
+// .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1')
 function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
-  const urlPath = componentPath
-    // 拡張子を取り除く
-    .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1')
-    // /index を消す
-    .replace(/^(.*)\/index$/, '$1')
+  let urlPath = componentPath
+    // 末尾の/index.{js,jsx,ts,tsx} を消す
+    .replace(/^(.*)\/index\.(js|jsx|ts|tsx)$/, '$1')
     // 先頭の@/pagesを取り除く
     .replace(/^@\/pages(.*)$/, '$1');
+
+  const isLastOptional = /^(.*)\.(js|jsx|ts|tsx)$/.test(urlPath);
+  if (isLastOptional) {
+    urlPath = urlPath.replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1');
+  }
   return _calcRouteMetaData({
     path: urlPath,
+    isLastOptional,
     component: `() => import(${
       prefetch ? '/* webpackPrefetch: true */' : ''
     } '${componentPath}')`
@@ -65,6 +68,14 @@ function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
 function _calcRouteMetaData(metaData: MetaData): MetaData {
   const result = /^(.*)\[(.*?)\](.*)$/.exec(metaData.urlPath);
   if (!result) {
+    if (metaData.isLastOptional) {
+      const items = metaData.urlPath.split('/');
+      items[items.length - 1] = `${items[items.length - 1]}?`;
+      metaData = {
+        ...metaData,
+        urlPath: items.join('/'),
+      };
+    }
     return metaData;
   }
   result.reverse();
@@ -77,8 +88,7 @@ function _calcRouteMetaData(metaData: MetaData): MetaData {
   }
 
   return _calcRouteMetaData({
-    component: metaData.component,
-    path: metaData.path,
+    ...metaData,
     urlPath: isRest
       ? `${result[2]}:${result[1]}(.*)`
       : `${result[2]}:${result[1]}${result[0]}`,
