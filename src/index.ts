@@ -79,7 +79,9 @@ function _calcRouteMetaData(metaData: MetaData): MetaData {
   return _calcRouteMetaData({
     component: metaData.component,
     path: metaData.path,
-    urlPath: isRest ? result[2] : `${result[2]}:${result[1]}${result[0]}`,
+    urlPath: isRest
+      ? `${result[2]}:${result[1]}(.*)`
+      : `${result[2]}:${result[1]}${result[0]}`,
     slugs: [
       ...(metaData.slugs ?? []),
       {
@@ -98,9 +100,7 @@ function route2RouteConfig(route: MetaData, wrap: string) {
 
 function route2RouteComponent(route: MetaData) {
   return `
-<Route path='${route.urlPath}' component={RouteConfig["${route.urlPath}"]} ${
-    getRestSlug(route) ? 'strict' : 'exact'
-  } />
+<Route path='${route.urlPath}' component={RouteConfig["${route.urlPath}"]} exact />
 `;
 }
 
@@ -136,26 +136,8 @@ export function generate(params: GenCodeInput) {
       .map(
         (route) =>
           `['${route.path}']: { ${(route.slugs as Slugs)
-            .filter((route) => !route.isRest)
             .map((slug) => `['${slug.name}']: string`)
             .join(';')} }`,
-      )
-      .join(';')}
-  }`;
-
-  const regExpCode = `export const extractRestParamsFromPathname = {
-    ${routes
-      .filter((route) => getRestSlug(route))
-      .map(
-        (route) =>
-          `['${
-            route.path
-          }']: (pathname: string) => new RegExp('^${route.path
-            .replace(/\[\.\.\..*?\]/, '(.*)')
-            .replace(
-              /\[.*?\]/g,
-              '(?:.*?)',
-            )}$').exec(pathname)?.[1].split('/') || []`,
       )
       .join(';')}
   }`;
@@ -164,8 +146,6 @@ export function generate(params: GenCodeInput) {
   ${sourceHead}
 
   ${typeCode}
-
-  ${regExpCode}
 
   export const RouteConfig = {
     ${routes.map((route) => route2RouteConfig(route, wrap))}
