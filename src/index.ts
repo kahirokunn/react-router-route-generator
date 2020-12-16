@@ -108,6 +108,12 @@ function route2RouteConfig(route: MetaData, wrap: string) {
 `;
 }
 
+function route2RouteEnum(route: MetaData) {
+  return `
+  ['${route.path === '' ? '/' : route.path}']: '${route.urlPath}'
+`;
+}
+
 function route2RouteComponent(route: MetaData) {
   return `
 <Route path='${route.urlPath}' component={RouteConfig["${route.urlPath}"]} exact />
@@ -160,6 +166,10 @@ export function generate(params: GenCodeInput) {
   export const RouteConfig = {
     ${routes.map((route) => route2RouteConfig(route, wrap))}
   }
+
+  export const RouteEnum = {
+    ${routes.map((route) => route2RouteEnum(route))}
+  } as const
 
   export default () => (
     <>

@@ -1,6 +1,6 @@
 {
   "name": "react-router-route-generator",
-  "version": "0.0.14",
+  "version": "0.0.16",
   "description": "React Router route generator",
   "homepage": "https://github.com/kahirokunn/react-router-route-generator",
   "bugs": "https://github.com/kahirokunn/react-router-route-generator/issues",
@@ -16,7 +16,7 @@
     "generate-routes": "src/bin/generate-routes.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x ./lib/src/bin/generate-routes.js",
     "clean": "rm -rf lib gen",
     "eslint": "eslint '**/*.{js,jsx,ts,tsx}'",
     "lint:fix": "npm run prettier && npm run eslint --fix",
