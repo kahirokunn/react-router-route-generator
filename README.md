@@ -75,43 +75,31 @@ export const Router = () => (
 
 ## Example
 
-### Basic
+### Basic 1
 
 ```
-$ npx generate-routes
+$ npx generate-routes ./src/pages
 ```
 
-### React.lazy
+### Basic 2
 
 ```
-$ npx generate-routes -wrap 'React.lazy($1)' -sourceHead 'import React from "react"; import { Route } from "react-router";'
-```
-
-### Specify Target Directory
-
-```
-$ npx generate-routes --targetDir 'src/pages/users/\\[userId\\]'
-```
-
-### Specify Output Directory
-
-```
-$ npx generate-routes -o src/gen/users/[userId]
+$ npx generate-routes -b ./src/pages -- ./src/pages/users/\[userId\]
 ```
 
 ### Ignore Files By Glob Pattern
 
 ```
-$ npx generate-routes --ignore '**/*.spec.*' --ignore '**/*.stories.*'
+$ npx generate-routes -i '**/*.spec.*' -i '**/*.stories.*' -- ./src/pages
 ```
 
 ### Separate Generated Files Sample
 
 ```package.json
 "scripts": {
-    "generate:routes": "rm -rf src/gen && ./node_modules/.bin/npm-run-all -p generate:routes:*",
-    "generate:routes:users": "mkdir -p src/gen/users/[userId] && npx generate-routes --targetDir 'src/pages/users/\\[userId\\]' -o src/gen/users/[userId] --ignore '**/*.spec.*' --ignore '**/*.stories.*' && npx prettier src/gen/users/** --write",
-    "generate:routes:rest": "mkdir -p src/gen/rest && npx generate-routes --targetDir src/pages -o src/gen/rest --ignore 'src/pages/{auth0,users/\\[userId\\]/*}/**/*' --ignore '**/*.spec.*' --ignore '**/*.stories.*' && npx prettier src/gen/rest/** --write",
+    "generate:routes": "npm-run-all -p generate:routes:* && npx prettier ./src/gen --write",
+    "generate:routes:users": "mkdir -p src/gen/users/[userId] && npx generate-routes -i '**/*.spec.*' -i '**/*.stories.*' -b ./src/pages -- ./src/pages/users/\[userId\] > src/gen/users/\[userId\]/routes.tsx",
+    "generate:routes:rest": "mkdir -p src/gen/rest && npx generate-routes -i 'src/pages/{auth0,users/\\[userId\\]/*}/**/*' -i '**/*.spec.*' -i '**/*.stories.*' -b ./src/pages -- ./src/pages > src/gen/rest/routes.tsx",
 }
 ```
 

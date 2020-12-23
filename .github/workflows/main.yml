@@ -16,7 +16,7 @@ jobs:
       - uses: bahmutov/npm-install@v1
 
       - name: lint
-        run: npm run eslint
+        run: npm run lint
 
   jest:
     name: Jest

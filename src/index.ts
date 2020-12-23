@@ -1,52 +1,19 @@
-import glob from 'glob';
 import compareFunc from 'compare-func';
-
-function assertsHasValue<T>(
-  value: T,
-  errorMessage: string,
-): asserts value is Exclude<T, null | undefined | void> {
-  if (value === null || value === undefined) {
-    throw new Error(errorMessage);
-  }
-}
-
-function globSync(
-  patterns: string | string[],
-  ignorePatterns: string[],
-): string[] {
-  if (typeof patterns === 'string') {
-    patterns = [patterns];
-  }
-
-  return patterns.reduce(
-    (acc, pattern) =>
-      acc.concat(glob.sync(pattern, { nodir: true, ignore: ignorePatterns })),
-    [] as string[],
-  );
-}
-
-type Slug = {
-  name: string;
-  isRest: boolean;
-};
-type Slugs = Slug[];
-
-type MetaData = {
-  component: string;
-  urlPath: string;
-  path: string;
-  slugs?: Slugs;
-  isLastOptional: boolean;
-};
+import { MetaData } from './type';
+import { assertsHasValue, escapeFilePath, globSync } from './utils';
+import * as ts from 'typescript';
+import { factory } from 'typescript';
+import { generateRouteConfig } from './generators/generateRouteConfig';
+import { generateRoutes } from './generators/generateRoutes';
+import { generateSourceHead } from './generators/generateSourceHead';
+import { generateTypeCode } from './generators/generateTypeCode';
 
 // 拡張子を取り除く
 // .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1')
-function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
+function genRouteMetaData(componentPath: string): MetaData {
   let urlPath = componentPath
     // 末尾の/index.{js,jsx,ts,tsx} を消す
-    .replace(/^(.*)\/index\.(js|jsx|ts|tsx)$/, '$1')
-    // 先頭の@/pagesを取り除く
-    .replace(/^@\/pages(.*)$/, '$1');
+    .replace(/^(.*)\/index\.(js|jsx|ts|tsx)$/, '$1');
 
   const isLastOptional = /^(.*)\.(js|jsx|ts|tsx)$/.test(urlPath);
   if (isLastOptional) {
@@ -55,11 +22,7 @@ function genRouteMetaData(componentPath: string, prefetch: boolean): MetaData {
   return _calcRouteMetaData({
     path: urlPath,
     isLastOptional,
-    component: `() => import(${
-      prefetch ? '/* webpackPrefetch: true */' : ''
-    } '${componentPath}')`
-      // 拡張子を取り除く
-      .replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1'),
+    componentPath: componentPath.replace(/^(.*)\.(js|jsx|ts|tsx)$/, '$1'),
     urlPath: urlPath === '' ? '/' : urlPath,
   });
 }
@@ -102,83 +65,48 @@ function _calcRouteMetaData(metaData: MetaData): MetaData {
   });
 }
 
-function route2RouteConfig(route: MetaData, wrap: string) {
-  return `
-  ['${route.urlPath}']: ${wrap.replace('$1', route.component)}
-`;
-}
-
-function route2RouteEnum(route: MetaData) {
-  return `
-  ['${route.path === '' ? '/' : route.path}']: '${route.urlPath}'
-`;
-}
-
-function route2RouteComponent(route: MetaData) {
-  return `
-<Route path='${route.urlPath}' component={RouteConfig["${route.urlPath}"]} exact />
-`;
-}
-
-type GenCodeInput = Partial<{
-  sourceHead: string;
-  wrap: string;
+type GenCodeInput = {
   targetDir: string;
-  ignorePatterns: string[];
-  prefetch: boolean;
-}>;
+  baseDir: string;
+  importPrefix: string;
+  ignorePatterns?: string[];
+};
 export function generate(params: GenCodeInput) {
-  const {
-    sourceHead = "import React from 'react'; import { Route } from 'react-router'; import loadable from '@loadable/component';",
-    wrap = 'loadable($1)',
-    targetDir = 'src/pages',
-    ignorePatterns = [],
-    prefetch = false,
-  } = params;
+  const { targetDir, baseDir, importPrefix, ignorePatterns = [] } = params;
 
-  const routes = globSync(`${targetDir}/**/*`, ignorePatterns)
+  const routes = globSync(`${escapeFilePath(targetDir)}/**/*`, ignorePatterns)
     .map((filePath) => {
-      const result = /^src\/(.*)$/.exec(filePath);
-      assertsHasValue(result, "There can't be an error here.");
-      return `@/${result[1]}`;
+      const result = new RegExp(`^${baseDir}(.*)$`).exec(filePath);
+      assertsHasValue(
+        result,
+        `There can't be an error here. filePath: ${filePath}`,
+      );
+      return result[1];
     })
-    .map((componentPath) => genRouteMetaData(componentPath, prefetch))
+    .map((componentPath) => genRouteMetaData(componentPath))
     .sort(compareFunc('urlPath'))
     .reverse();
 
-  const typeCode = `export type UseParamsType = {
-    ${routes
-      .filter((route) => route.slugs)
-      .map(
-        (route) =>
-          `['${route.path}']: { ${(route.slugs as Slugs)
-            .map((slug) => `['${slug.name}']: string`)
-            .join(';')} }`,
-      )
-      .join(';')}
-  }`;
+  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
 
-  const routesCode = `
-  ${sourceHead}
-
-  ${typeCode}
-
-  export const RouteConfig = {
-    ${routes.map((route) => route2RouteConfig(route, wrap))}
-  }
-
-  export const RouteEnum = {
-    ${routes.map((route) => route2RouteEnum(route))}
-  } as const
-
-  export default () => (
-    <>
-      ${routes.map((route) => route2RouteComponent(route)).join('')}
-    </>
-  )
-  `;
-
-  return {
-    routesCode,
-  };
+  return printer.printNode(
+    ts.EmitHint.Unspecified,
+    factory.createSourceFile(
+      [
+        ...generateSourceHead(),
+        ...generateTypeCode(routes),
+        ...generateRouteConfig(routes, importPrefix),
+        ...generateRoutes(routes),
+      ],
+      factory.createToken(ts.SyntaxKind.EndOfFileToken),
+      ts.NodeFlags.None,
+    ),
+    ts.createSourceFile(
+      '',
+      '',
+      ts.ScriptTarget.ESNext,
+      false,
+      ts.ScriptKind.TSX,
+    ),
+  );
 }
