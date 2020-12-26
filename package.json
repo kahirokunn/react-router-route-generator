@@ -1,6 +1,6 @@
 {
   "name": "react-router-route-generator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React Router route generator",
   "homepage": "https://github.com/kahirokunn/react-router-route-generator",
   "bugs": "https://github.com/kahirokunn/react-router-route-generator/issues",
@@ -10,8 +10,8 @@
   },
   "license": "MIT",
   "author": "kahirokunn",
-  "main": "src/index.js",
-  "typings": "src/index.d.ts",
+  "main": "lib/src/index.js",
+  "typings": "lib/src/index.d.ts",
   "bin": {
     "generate-routes": "src/bin/generate-routes.js"
   },
