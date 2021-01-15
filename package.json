@@ -44,7 +44,7 @@
     ]
   },
   "dependencies": {
-    "commander": "^6.2.1",
+    "commander": "^7.0.0",
     "compare-func": "^2.0.0",
     "glob": "^7.1.6"
   },
