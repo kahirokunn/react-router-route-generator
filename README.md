@@ -90,7 +90,7 @@ $ npx generate-routes -b ./src/pages -- ./src/pages/users/\[userId\]
 ### Ignore Files By Glob Pattern
 
 ```
-$ npx generate-routes -i '**/*.spec.*' -i '**/*.stories.*' -- ./src/pages
+$ npx generate-routes -i "**/*.spec.*" -i "**/*.stories.*" -- ./src/pages
 ```
 
 ### Separate Generated Files Sample
@@ -98,8 +98,8 @@ $ npx generate-routes -i '**/*.spec.*' -i '**/*.stories.*' -- ./src/pages
 ```package.json
 "scripts": {
     "generate:routes": "npm-run-all -p generate:routes:* && npx prettier ./src/gen --write",
-    "generate:routes:users": "mkdir -p src/gen/users/[userId] && npx generate-routes -i '**/*.spec.*' -i '**/*.stories.*' -b ./src/pages -- ./src/pages/users/\[userId\] > src/gen/users/\[userId\]/routes.tsx",
-    "generate:routes:rest": "mkdir -p src/gen/rest && npx generate-routes -i 'src/pages/{auth0,users/\\[userId\\]/*}/**/*' -i '**/*.spec.*' -i '**/*.stories.*' -b ./src/pages -- ./src/pages > src/gen/rest/routes.tsx",
+    "generate:routes:users": "mkdir -p src/gen/users/[userId] && npx generate-routes -i \"**/*.spec.*\" -i \"**/*.stories.*\" -b ./src/pages -- ./src/pages/users/[userId] > src/gen/users/[userId]/routes.tsx",
+    "generate:routes:rest": "mkdir -p src/gen/rest && npx generate-routes -i \"${PWD}/src/pages/{auth0,users/[userId]}/**/*\" -i \"**/*.spec.*\" -i \"**/*.stories.*\" -b ./src/pages -- ./src/pages > src/gen/rest/routes.tsx",
 }
 ```
 

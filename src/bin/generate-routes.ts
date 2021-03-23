@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-
 import path from 'path';
-import program from 'commander';
+import { Command } from 'commander';
 import { generate } from '../index';
 import meta from '../../package.json';
+
+const program = new Command();
 
 program
   .version(meta.version)
@@ -16,14 +17,16 @@ program
 if (program.args.length === 0) {
   program.help();
 } else {
+  const options = program.opts();
+
   const targetDir = path.resolve(process.cwd(), program.args[0]);
-  const baseDir = path.resolve(process.cwd(), program.baseDir || targetDir);
+  const baseDir = path.resolve(process.cwd(), options.baseDir || targetDir);
 
   const sourceCode = generate({
     targetDir,
     baseDir,
-    importPrefix: program.importPrefix ?? '@/pages',
-    ignorePatterns: program.ignore,
+    importPrefix: options.importPrefix ?? '@/pages',
+    ignorePatterns: options.ignore,
   });
   console.log(sourceCode);
 }
