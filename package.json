@@ -40,7 +40,7 @@
     ]
   },
   "dependencies": {
-    "commander": "^7.2.0",
+    "commander": "^8.0.0",
     "compare-func": "^2.0.0",
     "glob": "^7.1.6"
   },
